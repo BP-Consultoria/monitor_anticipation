@@ -1,11 +1,8 @@
 import os
-import sys
 import pytest
 from unittest.mock import patch, MagicMock
 import pyodbc
 import database.connection
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 
 class TestDatabaseConnection:

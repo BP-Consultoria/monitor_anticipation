@@ -1,9 +1,6 @@
 import os
-import sys
 import pytest
 import pandas as pd
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from utils.excel_reader import read_excel, read_excel_multiple_sheets
 from fileserver.connection import mount_network, get_mounted_path
