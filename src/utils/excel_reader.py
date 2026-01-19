@@ -64,28 +64,23 @@ def read_xlsx_columns_and_get_data(
     full_path = get_mounted_path(file_path, network_path)
     
     if not os.path.exists(full_path):
-        base_dir = os.path.dirname(full_path)
-        if os.path.exists(base_dir):
-            all_items = os.listdir(base_dir)
-            files = [f for f in all_items if os.path.isfile(os.path.join(base_dir, f))]
-            xlsx_files = [f for f in files if f.lower().endswith('.xlsx')]
+        base_directory = os.path.dirname(full_path)
+        if os.path.exists(base_directory):
+            directory_items = os.listdir(base_directory)
+            excel_files = [
+                item for item in directory_items 
+                if os.path.isfile(os.path.join(base_directory, item)) 
+                and item.lower().endswith('.xlsx')
+            ]
             
-            if xlsx_files:
-                selected_file = None
-                for f in xlsx_files:
-                    if 'RELAÇÃO PORTAIS' in f.upper() or 'ANTECIPAÇÃO' in f.upper():
-                        selected_file = f
-                        break
-                
-                if not selected_file:
-                    selected_file = xlsx_files[0]
-                
+            if excel_files:
+                first_excel_file = excel_files[0]
                 base_path = os.path.dirname(file_path)
-                file_path = os.path.join(base_path, selected_file)
+                file_path = os.path.join(base_path, first_excel_file)
             else:
-                raise FileNotFoundError(f"Nenhum arquivo Excel encontrado em: {base_dir}")
+                raise FileNotFoundError(f"Nenhum arquivo Excel encontrado em: {base_directory}")
         else:
-            raise FileNotFoundError(f"Diretório não existe: {base_dir}")
+            raise FileNotFoundError(f"Diretório não existe: {base_directory}")
     
     df = read_excel(file_path, sheet_name=sheet_name, network_path=network_path, auto_mount=False)
     
