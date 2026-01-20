@@ -53,7 +53,7 @@ def read_xlsx_columns_and_get_data(
     auto_mount: bool = True,
     sheet_name: Optional[Union[str, int]] = 0
 ) -> pd.DataFrame:
-    required_columns = ['CEDENTES', 'SACADO', 'PORTAL/EMAIL', 'LOGIN', 'SENHA']
+    required_columns = ['CODIGO CEDENTE', 'GRUPO SACADO','CEDENTE', 'SACADO', 'PORTAL/EMAIL', 'LOGIN', 'SENHA']
     
     if auto_mount:
         try:
@@ -90,6 +90,13 @@ def read_xlsx_columns_and_get_data(
     
     df_filtered = df[required_columns].copy()
     
-    df_filtered = df_filtered.dropna(subset=['CEDENTES', 'SACADO'], how='all')
+    df_filtered = df_filtered.dropna(subset=['CEDENTE', 'GRUPO SACADO'], how='all')
+    
+    numeric_columns = ['CODIGO CEDENTE', 'GRUPO SACADO']
+    for column in numeric_columns:
+        if column in df_filtered.columns:
+            df_filtered[column] = df_filtered[column].apply(
+                lambda x: int(x) if pd.notna(x) else pd.NA
+            )
     
     return df_filtered
