@@ -132,3 +132,6 @@ dmypy.json
 # Python __init__ files (if needed)
 __init__.py
 
+# Template folder
+src/template/
+template/
