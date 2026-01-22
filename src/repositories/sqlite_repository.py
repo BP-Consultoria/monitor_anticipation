@@ -1,4 +1,5 @@
 from typing import List, Optional, Dict, Any
+import pandas as pd
 from sqlalchemy.orm import Session
 from models.models import Antecipacao, get_session
 
@@ -59,3 +60,8 @@ class SQLiteRepository:
             is_inserted=is_inserted
         )
         return self.save(antecipacao)
+    
+    def get_all_antecipations_as_dataframe(self) -> pd.DataFrame:
+        query = self.session.query(Antecipacao)
+        df = pd.read_sql(query.statement, self.session.bind)
+        return df
