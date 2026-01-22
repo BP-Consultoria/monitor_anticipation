@@ -47,3 +47,11 @@ class SecuritizacaoRepository:
             WHERE CODIGO = ?
         """
         return pd.read_sql(query, self.connection, params=(codigo,))
+    
+    def get_cedente_name(self, cedente_id: int) -> pd.DataFrame:
+        query = """
+            SELECT NOME
+            FROM SIGCAD
+            WHERE CODIGO = ?
+        """
+        return pd.read_sql(query, self.connection, params=(cedente_id,))
