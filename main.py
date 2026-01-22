@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from utils.excel_reader import read_xlsx_columns_and_get_data
+from utils.excel_reader import read_xlsx_columns_and_get_data, export_antecipations_to_excel
 from repositories.securitizacao_repository import SecuritizacaoRepository
 from repositories.sqlite_repository import SQLiteRepository
 from models.models import init_database
@@ -56,6 +56,15 @@ def main():
                         print(f"Bordero {bordero_id}: CLIFOR não encontrado para título {dcto}.")
                         continue
                     
+                    df_cedente_info = securitizacao_repo.get_cedente_name(clifor)
+                    
+                    if df_cedente_info.empty:
+                        print(f"Bordero {bordero_id}: Nome do cedente {clifor} não encontrado no banco de dados.")
+                        continue
+                    
+                    cedente_nome_db = df_cedente_info.iloc[0]['NOME']
+                    print(f"Bordero {bordero_id}: Cedente encontrado: {cedente_nome_db}")
+                    
                     df_match = df_excel[df_excel['CODIGO CEDENTE'] == clifor]
                     
                     if not df_match.empty:
@@ -67,7 +76,6 @@ def main():
                     
                     for _, excel_row in df_match.iterrows():
                         grupo_sacado = excel_row['GRUPO SACADO']
-                        cedente = excel_row['CEDENTE']
                         portal_email = excel_row['PORTAL/EMAIL']
                         login = excel_row['LOGIN']
                         senha = excel_row['SENHA']
@@ -99,7 +107,7 @@ def main():
                         cnpj_sacado = str(sacado_info_row['CGC']) if pd.notna(sacado_info_row['CGC']) else None
                         
                         antecipacao = sqlite_repo.insert_antecipacao(
-                            cedente=cedente,
+                            cedente=cedente_nome_db,
                             sacado=sacado_nome_db,
                             bordero=bordero_id,
                             cnpj_sacado=cnpj_sacado,
@@ -117,6 +125,19 @@ def main():
             except Exception as e:
                 print(f"Erro ao processar bordero {bordero_id}: {str(e)}")
                 continue
+        
+        print("\n--- Exportando dados para Excel ---")
+        try:
+            df_antecipations = sqlite_repo.get_all_antecipations_as_dataframe()
+            
+            if not df_antecipations.empty:
+                output_path = export_antecipations_to_excel(df_antecipations)
+                print(f"Planilha exportada com sucesso para: {output_path}")
+                print(f"Total de registros exportados: {len(df_antecipations)}")
+            else:
+                print("Nenhum registro encontrado para exportar.")
+        except Exception as e:
+            print(f"Erro ao exportar dados para Excel: {str(e)}")
     
     finally:
         securitizacao_repo.close()
