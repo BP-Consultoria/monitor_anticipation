@@ -20,7 +20,6 @@ def main():
         securitizacao_repo = SecuritizacaoRepository()
     except Exception as e:
         print(f"Erro ao conectar com o banco de dados SQL Server: {str(e)}")
-        print("Verifique as configurações de conexão no arquivo .env")
         return
     
     sqlite_repo = SQLiteRepository()
@@ -38,7 +37,6 @@ def main():
                 df_bordero_info = securitizacao_repo.get_bordero_info(bordero_id)
                 
                 if df_bordero_info.empty:
-                    print(f"Bordero {bordero_id}: Nenhuma informação encontrada.")
                     continue
                 
                 print(f"Bordero {bordero_id}: {len(df_bordero_info)} título(s) encontrado(s)")
@@ -50,20 +48,16 @@ def main():
                     valor = float(bordero_row['VALOR']) if pd.notna(bordero_row['VALOR']) else None
                     vcto = str(bordero_row['VCTO_']) if pd.notna(bordero_row['VCTO_']) else None
                     
-                    print(f"Bordero {bordero_id}: Processando título {dcto} - CLIFOR = {clifor}, SACADO = {sacado_id}")
                     
                     if clifor is None:
-                        print(f"Bordero {bordero_id}: CLIFOR não encontrado para título {dcto}.")
                         continue
                     
                     df_cedente_info = securitizacao_repo.get_cedente_name(clifor)
                     
                     if df_cedente_info.empty:
-                        print(f"Bordero {bordero_id}: Nome do cedente {clifor} não encontrado no banco de dados.")
                         continue
                     
                     cedente_nome_db = df_cedente_info.iloc[0]['NOME']
-                    print(f"Bordero {bordero_id}: Cedente encontrado: {cedente_nome_db}")
                     
                     df_match = df_excel[df_excel['CODIGO CEDENTE'] == clifor]
                     
@@ -71,7 +65,6 @@ def main():
                         print(f"Bordero {bordero_id}: CLIFOR {clifor} encontrado no Excel ({len(df_match)} correspondência(s))")
                     
                     if df_match.empty:
-                        print(f"Bordero {bordero_id}: CLIFOR {clifor} não encontrado no Excel para título {dcto}.")
                         continue
                     
                     for _, excel_row in df_match.iterrows():
@@ -81,7 +74,6 @@ def main():
                         senha = excel_row['SENHA']
                         
                         if pd.isna(grupo_sacado):
-                            print(f"Bordero {bordero_id}: GRUPO SACADO não encontrado no Excel para título {dcto}.")
                             continue
                         
                         grupo_sacado = int(grupo_sacado)
@@ -93,13 +85,11 @@ def main():
                             print(f"Bordero {bordero_id}: Sacado {sacado_id} confirmado no grupo {grupo_sacado}")
                         
                         if df_group_check.empty:
-                            print(f"Bordero {bordero_id}: Sacado {sacado_id} não está no grupo {grupo_sacado}. Transação cancelada para título {dcto}.")
                             continue
                         
                         df_sacado_info = securitizacao_repo.get_sacado_info(sacado_id)
                         
                         if df_sacado_info.empty:
-                            print(f"Bordero {bordero_id}: Informações do sacado {sacado_id} não encontradas para título {dcto}.")
                             continue
                         
                         sacado_info_row = df_sacado_info.iloc[0]
@@ -125,15 +115,12 @@ def main():
             except Exception as e:
                 print(f"Erro ao processar bordero {bordero_id}: {str(e)}")
                 continue
-        
-        print("\n--- Exportando dados para Excel ---")
+
         try:
             df_antecipations = sqlite_repo.get_all_antecipations_as_dataframe()
             
             if not df_antecipations.empty:
                 output_path = export_antecipations_to_excel(df_antecipations)
-                print(f"Planilha exportada com sucesso para: {output_path}")
-                print(f"Total de registros exportados: {len(df_antecipations)}")
             else:
                 print("Nenhum registro encontrado para exportar.")
         except Exception as e:
