@@ -4,6 +4,7 @@ import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from fileserver.connection import get_mounted_path, mount_network
+from datetime import datetime
 
 
 def read_excel(
@@ -119,7 +120,8 @@ def export_antecipations_to_excel(
     
     if output_path is None:
         template_dir = os.path.dirname(template_path)
-        output_path = os.path.join(template_dir, "antecipacoes_exportadas.xlsx")
+        timestamp = datetime.now().strftime("%d-%m-%Y_%H-%M")
+        output_path = os.path.join(template_dir, f"Titulos Concedidos para Antecipação_{timestamp}.xlsx")
     
     workbook = load_workbook(template_path)
     
