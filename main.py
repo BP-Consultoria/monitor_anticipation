@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 from utils.excel_reader import read_xlsx_columns_and_get_data, export_antecipations_to_excel
+from fileserver.connection import move_file_to_network_share
 from repositories.securitizacao_repository import SecuritizacaoRepository
 from repositories.sqlite_repository import SQLiteRepository
 from models.models import init_database
@@ -9,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 file_path = os.getenv("FILE_PATH")
-
+file_path_output = os.getenv("FILE_PATH_OUTPUT")
 
 def main():
     init_database()
@@ -134,6 +135,7 @@ def main():
             
             if not df_antecipations.empty:
                 output_path = export_antecipations_to_excel(df_antecipations)
+                move_file_to_network_share(output_path, file_path_output)
             else:
                 print("Nenhum registro encontrado para exportar.")
         except Exception as e:
