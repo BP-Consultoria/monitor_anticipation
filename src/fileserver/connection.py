@@ -3,6 +3,7 @@ import platform
 import subprocess
 from typing import Optional
 from dotenv import load_dotenv
+import shutil
 
 load_dotenv()
 
@@ -171,4 +172,26 @@ def get_mounted_path(file_path: str, network_path: Optional[str] = None) -> str:
         full_path = os.path.join(mount_point, file_path_normalized)
     
     return full_path
+
+
+def move_file_to_network_share(
+    file_path: str,
+    file_path_output: str
+) -> str:
+    
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Arquivo local não encontrado: {file_path}")
+
+    output_full_path = get_mounted_path(file_path_output)
+
+    output_dir = os.path.dirname(output_full_path)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+
+    try:
+        shutil.move(file_path, output_full_path)
+    except Exception as e:
+        raise IOError(f"Erro ao mover arquivo para rede: {e}")
+
+    return output_full_path
 
