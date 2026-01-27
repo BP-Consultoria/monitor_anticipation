@@ -75,20 +75,33 @@ def main():
                         
                         if pd.isna(grupo_sacado):
                             continue
-                        
-                        grupo_sacado = int(grupo_sacado)
-                        print(f"Bordero {bordero_id}: GRUPO SACADO = {grupo_sacado}")
-                        
-                        df_group_check = securitizacao_repo.check_sacado_in_group(grupo_sacado, sacado_id)
-                        
-                        if not df_group_check.empty:
+
+                        grupo_sacado_str = str(int(grupo_sacado))
+
+                        if len(grupo_sacado_str) > 3:
+                            sacado_excel_id = int(grupo_sacado_str)
+
+                            if sacado_excel_id != sacado_id:
+                                continue
+
+                            print(f"Bordero {bordero_id}: Sacado direto {sacado_id} confirmado pelo Excel")
+
+                        else:
+                            grupo_sacado = int(grupo_sacado_str)
+                            print(f"Bordero {bordero_id}: GRUPO SACADO = {grupo_sacado}")
+
+                            df_group_check = securitizacao_repo.check_sacado_in_group(
+                                grupo_sacado,
+                                sacado_id
+                            )
+
+                            if df_group_check.empty:
+                                continue
+
                             print(f"Bordero {bordero_id}: Sacado {sacado_id} confirmado no grupo {grupo_sacado}")
-                        
-                        if df_group_check.empty:
-                            continue
-                        
+
                         df_sacado_info = securitizacao_repo.get_sacado_info(sacado_id)
-                        
+
                         if df_sacado_info.empty:
                             continue
                         
