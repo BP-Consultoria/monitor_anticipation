@@ -5,6 +5,7 @@ from openpyxl import load_workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from fileserver.connection import get_mounted_path, mount_network
 from datetime import datetime
+from pathlib import Path
 
 
 def read_excel(
@@ -112,8 +113,8 @@ def export_antecipations_to_excel(
     sheet_name: Optional[Union[str, int]] = 0
 ) -> str:
     if template_path is None:
-        current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        template_path = os.path.join(current_dir, "template", "template.xlsx")
+        current_dir = Path(__file__).resolve().parents[1]
+        template_path = current_dir / "template" / "template.xlsx"
     
     if not os.path.exists(template_path):
         raise FileNotFoundError(f"Template file not found: {template_path}")
