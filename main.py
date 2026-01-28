@@ -40,8 +40,6 @@ def main():
                 if df_bordero_info.empty:
                     continue
                 
-                print(f"Bordero {bordero_id}: {len(df_bordero_info)} título(s) encontrado(s)")
-                
                 for _, bordero_row in df_bordero_info.iterrows():
                     clifor = int(bordero_row['CLIFOR']) if pd.notna(bordero_row['CLIFOR']) else None
                     sacado_id = int(bordero_row['SACADO']) if pd.notna(bordero_row['SACADO']) else None
@@ -63,7 +61,7 @@ def main():
                     df_match = df_excel[df_excel['CODIGO CEDENTE'] == clifor]
                     
                     if not df_match.empty:
-                        print(f"Bordero {bordero_id}: CLIFOR {clifor} encontrado no Excel ({len(df_match)} correspondência(s))")
+                        continue
                     
                     if df_match.empty:
                         continue
@@ -85,11 +83,8 @@ def main():
                             if sacado_excel_id != sacado_id:
                                 continue
 
-                            print(f"Bordero {bordero_id}: Sacado direto {sacado_id} confirmado pelo Excel")
-
                         else:
                             grupo_sacado = int(grupo_sacado_str)
-                            print(f"Bordero {bordero_id}: GRUPO SACADO = {grupo_sacado}")
 
                             df_group_check = securitizacao_repo.check_sacado_in_group(
                                 grupo_sacado,
@@ -99,8 +94,6 @@ def main():
                             if df_group_check.empty:
                                 continue
 
-                            print(f"Bordero {bordero_id}: Sacado {sacado_id} confirmado no grupo {grupo_sacado}")
-
                         df_sacado_info = securitizacao_repo.get_sacado_info(sacado_id)
 
                         if df_sacado_info.empty:
@@ -109,6 +102,19 @@ def main():
                         sacado_info_row = df_sacado_info.iloc[0]
                         sacado_nome_db = sacado_info_row['NOME']
                         cnpj_sacado = str(sacado_info_row['CGC']) if pd.notna(sacado_info_row['CGC']) else None
+                        
+                        
+                        titulo_int = int(dcto) if pd.notna(dcto) else None
+                        
+                        if titulo_int is None:
+                            continue
+                        
+                        if sqlite_repo.antecipations_exists(
+                            bordero = bordero_id,
+                            titulo= titulo_int,
+                            cnpj_sacado=cnpj_sacado
+                        ):
+                            continue
                         
                         antecipacao = sqlite_repo.insert_antecipacao(
                             cedente=cedente_nome_db,
@@ -123,8 +129,6 @@ def main():
                             senha=str(senha) if pd.notna(senha) else None,
                             is_inserted=False
                         )
-                        
-                        print(f"Bordero {bordero_id}: Título {dcto} inserido com sucesso (ID: {antecipacao.id})")
             
             except Exception as e:
                 print(f"Erro ao processar bordero {bordero_id}: {str(e)}")

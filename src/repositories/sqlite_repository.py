@@ -65,3 +65,15 @@ class SQLiteRepository:
         query = self.session.query(Antecipacao)
         df = pd.read_sql(query.statement, self.session.bind)
         return df
+    
+    def antecipations_exists(self, bordero: int, titulo: int, cnpj_sacado: str | None) -> bool:
+        
+        return (
+            self.session.query(Antecipacao)
+            .filter(
+                Antecipacao.bordero == bordero,
+                Antecipacao.titulo == titulo,
+                Antecipacao.cnpj_sacado == cnpj_sacado
+            ).first()
+            is not None
+        )
