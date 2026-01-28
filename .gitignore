@@ -129,6 +129,13 @@ dmypy.json
 *.swo
 *~
 
+# Excel
+*.xlsx
+
+# Banco de dados
+*.db
+
+
 # Python __init__ files (if needed)
 __init__.py
 
