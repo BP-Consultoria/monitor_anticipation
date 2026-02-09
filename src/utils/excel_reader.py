@@ -8,6 +8,27 @@ from datetime import datetime
 from pathlib import Path
 
 
+def format_date_to_br(date_value) -> Optional[str]:
+    """Converte data no formato YYYY-MM-DD ou YYYY-MM-DD HH:MM:SS.000 para DD-MM-YYYY."""
+    if date_value is None or (isinstance(date_value, float) and pd.isna(date_value)):
+        return None
+    s = str(date_value).strip()
+    if not s:
+        return None
+    try:
+        if " " in s:
+            s = s.split(" ")[0]
+        parts = s.replace("-", "/").split("/")
+        if len(parts) == 3:
+            y, m, d = parts[0], parts[1], parts[2]
+            if len(y) == 4 and len(m) <= 2 and len(d) <= 2:
+                return f"{d.zfill(2)}-{m.zfill(2)}-{y}"
+        dt = datetime.strptime(s[:10], "%Y-%m-%d")
+        return dt.strftime("%d-%m-%Y")
+    except Exception:
+        return None
+
+
 def read_excel(
     file_path: str,
     sheet_name: Optional[Union[str, int]] = 0,
@@ -132,8 +153,8 @@ def export_antecipations_to_excel(
         sheet = workbook[sheet_name] if sheet_name in workbook.sheetnames else workbook.worksheets[0]
     
     expected_columns = [
-        'bordero', 'cedente', 'sacado', 'cnpj_sacado', 
-        'titulo', 'valor', 'vencimento', 'portal/email', 'login', 'senha'
+        'bordero', 'cedente', 'sacado', 'cnpj_sacado',
+        'titulo', 'valor', 'emissao', 'vencimento', 'portal/email', 'login', 'senha'
     ]
     
     df_export = df_antecipations.copy()
@@ -141,11 +162,12 @@ def export_antecipations_to_excel(
     if 'portal_email' in df_export.columns:
         df_export['portal/email'] = df_export['portal_email']
     
-    columns_to_export = []
-    for col in expected_columns:
+    for col in ['emissao', 'vencimento']:
         if col in df_export.columns:
-            columns_to_export.append(col)
-        else:
+            df_export[col] = df_export[col].apply(lambda x: format_date_to_br(x) if pd.notna(x) else None)
+    
+    for col in expected_columns:
+        if col not in df_export.columns:
             df_export[col] = None
     
     df_export = df_export[expected_columns]

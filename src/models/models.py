@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, VARCHAR, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Float, VARCHAR, Boolean, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
@@ -21,6 +21,7 @@ class Antecipacao(Base):
     cnpj_sacado = Column(VARCHAR(14), nullable=True)
     titulo = Column(Integer, nullable=True)
     valor = Column(Float, nullable=True)
+    emissao = Column(VARCHAR(10), nullable=True)
     vencimento = Column(VARCHAR(10), nullable=True)
     portal_email = Column(String, nullable=True)
     login = Column(VARCHAR(255), nullable=True)
@@ -36,9 +37,20 @@ def get_sqlite_engine(db_path: str = None):
     return engine
 
 
+def _migrate_add_emissao(engine):
+    with engine.connect() as conn:
+        r = conn.execute(
+            text("SELECT name FROM pragma_table_info('antecipacao') WHERE name = 'emissao'")
+        )
+        if r.fetchone() is None:
+            conn.execute(text("ALTER TABLE antecipacao ADD COLUMN emissao VARCHAR(10)"))
+            conn.commit()
+
+
 def init_database(db_path: str = None):
     engine = get_sqlite_engine(db_path)
     Base.metadata.create_all(engine)
+    _migrate_add_emissao(engine)
     return engine
 
 

@@ -39,7 +39,7 @@ class SecuritizacaoRepository:
     
     def get_bordero_info(self, bordero_id: int) -> List[Dict[str, Any]]:
         query = """
-            SELECT CLIFOR, SACADO, DCTO, VALOR, VCTO_
+            SELECT CLIFOR, SACADO, DCTO, VALOR, VCTO_, EMISSAO
             FROM SIGFLU
             WHERE BORDERO = ?
         """

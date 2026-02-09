@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from utils.excel_reader import read_xlsx_columns_and_get_data, export_antecipations_to_excel
+from utils.excel_reader import read_xlsx_columns_and_get_data, export_antecipations_to_excel, format_date_to_br
 from fileserver.connection import move_file_to_network_share
 from repositories.securitizacao_repository import SecuritizacaoRepository
 from repositories.sqlite_repository import SQLiteRepository
@@ -11,6 +11,25 @@ load_dotenv()
 
 file_path = os.getenv("FILE_PATH")
 file_path_output = os.getenv("FILE_PATH_OUTPUT")
+
+
+def _ensure_dataframe(obj):
+    """Converte retorno do repositório (lista de dicts no Windows) em DataFrame."""
+    if obj is None:
+        return pd.DataFrame()
+    if isinstance(obj, list):
+        return pd.DataFrame(obj) if obj else pd.DataFrame()
+    return obj
+
+
+def _get_bordero_value(bordero_row, *keys):
+    """Obtém valor da linha tentando várias chaves (ex: EMISSAO/emissao no Windows)."""
+    for key in keys:
+        if key in bordero_row.index:
+            val = bordero_row[key]
+            return None if pd.isna(val) else val
+    return None
+
 
 def main():
     init_database()
@@ -26,8 +45,9 @@ def main():
     sqlite_repo = SQLiteRepository()
     
     try:
-        df_borderos = securitizacao_repo.get_done_bordero_today()
-        df_borderos = pd.DataFrame(df_borderos, columns=['bordero'])
+        df_borderos = _ensure_dataframe(securitizacao_repo.get_done_bordero_today())
+        if not df_borderos.empty and 'bordero' not in df_borderos.columns:
+            df_borderos = df_borderos.rename(columns={c: c.lower() for c in df_borderos.columns})
         
         if df_borderos.empty:
             print("Nenhum borderô encontrado para hoje.")
@@ -39,7 +59,7 @@ def main():
             bordero_id = int(row['bordero'])
             
             try:
-                df_bordero_info = securitizacao_repo.get_bordero_info(bordero_id)
+                df_bordero_info = _ensure_dataframe(securitizacao_repo.get_bordero_info(bordero_id))
                 if df_bordero_info.empty:
                     continue
                 
@@ -48,7 +68,10 @@ def main():
                     sacado_id = int(bordero_row['SACADO']) if pd.notna(bordero_row['SACADO']) else None
                     dcto = bordero_row['DCTO']
                     valor = float(bordero_row['VALOR']) if pd.notna(bordero_row['VALOR']) else None
-                    vcto = str(bordero_row['VCTO_']) if pd.notna(bordero_row['VCTO_']) else None
+                    vcto_raw = _get_bordero_value(bordero_row, 'VCTO_', 'vcto_')
+                    emissao_raw = _get_bordero_value(bordero_row, 'EMISSAO', 'emissao')
+                    vcto = format_date_to_br(vcto_raw)
+                    emissao = format_date_to_br(emissao_raw)
                     
                     print(f"\n[ANALISANDO] BORDERO: {bordero_id} | TITULO: {dcto} | CEDENTE: {clifor}")
                     
@@ -56,7 +79,7 @@ def main():
                         print(f"  [X] Falha: CLIFOR nulo.")
                         continue
                     
-                    df_cedente_info = securitizacao_repo.get_cedente_name(clifor)
+                    df_cedente_info = _ensure_dataframe(securitizacao_repo.get_cedente_name(clifor))
                     if df_cedente_info.empty:
                         print(f"  [X] Falha: Cedente {clifor} não encontrado no SIGCAD.")
                         continue
@@ -92,13 +115,15 @@ def main():
                                 continue
                         else:
                             grupo_sacado_int = int(grupo_sacado_str)
-                            df_group_check = securitizacao_repo.check_sacado_in_group(grupo_sacado_int, sacado_id)
+                            df_group_check = _ensure_dataframe(
+                                securitizacao_repo.check_sacado_in_group(grupo_sacado_int, sacado_id)
+                            )
                             if df_group_check.empty:
                                 print(f"  [X] Falha: Sacado {sacado_id} não pertence ao grupo {grupo_sacado_int}")
                                 continue
 
                         # Se passou pelas regras, busca info do Sacado
-                        df_sacado_info = securitizacao_repo.get_sacado_info(sacado_id)
+                        df_sacado_info = _ensure_dataframe(securitizacao_repo.get_sacado_info(sacado_id))
                         if df_sacado_info.empty:
                             print(f"  [X] Falha: Sacado {sacado_id} sem cadastro no SIGCAD.")
                             continue
@@ -125,6 +150,7 @@ def main():
                             cnpj_sacado=cnpj_sacado,
                             titulo=titulo_int,
                             valor=valor,
+                            emissao=emissao,
                             vencimento=vcto,
                             portal_email=str(portal_email) if pd.notna(portal_email) else None,
                             login=str(login) if pd.notna(login) else None,
@@ -140,7 +166,7 @@ def main():
         # Exportação Final
         print("\n--- Finalizando Processamento ---")
         try:
-            df_antecipations = sqlite_repo.get_all_antecipations_as_dataframe()
+            df_antecipations = _ensure_dataframe(sqlite_repo.get_all_antecipations_as_dataframe())
             if not df_antecipations.empty:
                 print(f"Exportando {len(df_antecipations)} registros para Excel...")
                 output_path = export_antecipations_to_excel(df_antecipations)
