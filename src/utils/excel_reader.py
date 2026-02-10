@@ -9,20 +9,25 @@ from pathlib import Path
 
 
 def format_date_to_br(date_value) -> Optional[str]:
-    """Converte data no formato YYYY-MM-DD ou YYYY-MM-DD HH:MM:SS.000 para DD-MM-YYYY."""
+    """Converte data no formato YYYY-MM-DD ou YYYY-MM-DD HH:MM:SS.000 para DD-MM-YYYY.
+    Se já estiver em DD-MM-YYYY, devolve sem alterar (evita apagar na exportação)."""
     if date_value is None or (isinstance(date_value, float) and pd.isna(date_value)):
         return None
     s = str(date_value).strip()
     if not s:
         return None
+    if " " in s:
+        s = s.split(" ")[0]
+    # Já está em DD-MM-YYYY? (ex: 26-03-2026) → devolver como está
     try:
-        if " " in s:
-            s = s.split(" ")[0]
-        parts = s.replace("-", "/").split("/")
-        if len(parts) == 3:
-            y, m, d = parts[0], parts[1], parts[2]
-            if len(y) == 4 and len(m) <= 2 and len(d) <= 2:
-                return f"{d.zfill(2)}-{m.zfill(2)}-{y}"
+        if len(s) >= 10 and s[2] == "-" and s[5] == "-":
+            d, m, y = s[:2], s[3:5], s[6:10]
+            if d.isdigit() and m.isdigit() and y.isdigit() and len(y) == 4:
+                return f"{d}-{m}-{y}"
+    except Exception:
+        pass
+    # Converter de YYYY-MM-DD para DD-MM-YYYY
+    try:
         dt = datetime.strptime(s[:10], "%Y-%m-%d")
         return dt.strftime("%d-%m-%Y")
     except Exception:
@@ -158,6 +163,8 @@ def export_antecipations_to_excel(
     ]
     
     df_export = df_antecipations.copy()
+    
+    df_export.columns = [str(c).lower().replace("antecipacao.", "") for c in df_export.columns]
     
     if 'portal_email' in df_export.columns:
         df_export['portal/email'] = df_export['portal_email']

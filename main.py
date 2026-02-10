@@ -31,6 +31,18 @@ def _get_bordero_value(bordero_row, *keys):
     return None
 
 
+def _safe_int(val, default=None):
+    """Converte para int sem falhar com pd.NA/NAType/NaN."""
+    if val is None:
+        return default
+    if pd.isna(val):
+        return default
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return default
+
+
 def main():
     init_database()
     
@@ -56,7 +68,9 @@ def main():
         print(f"Borderôs encontrados: {len(df_borderos)}")
         
         for _, row in df_borderos.iterrows():
-            bordero_id = int(row['bordero'])
+            bordero_id = _safe_int(row['bordero'])
+            if bordero_id is None:
+                continue
             
             try:
                 df_bordero_info = _ensure_dataframe(securitizacao_repo.get_bordero_info(bordero_id))
@@ -64,8 +78,8 @@ def main():
                     continue
                 
                 for _, bordero_row in df_bordero_info.iterrows():
-                    clifor = int(bordero_row['CLIFOR']) if pd.notna(bordero_row['CLIFOR']) else None
-                    sacado_id = int(bordero_row['SACADO']) if pd.notna(bordero_row['SACADO']) else None
+                    clifor = _safe_int(bordero_row['CLIFOR'])
+                    sacado_id = _safe_int(bordero_row['SACADO'])
                     dcto = bordero_row['DCTO']
                     valor = float(bordero_row['VALOR']) if pd.notna(bordero_row['VALOR']) else None
                     vcto_raw = _get_bordero_value(bordero_row, 'VCTO_', 'vcto_')
@@ -86,8 +100,9 @@ def main():
                     
                     cedente_nome_db = df_cedente_info.iloc[0]['NOME']
                     
-                    # Filtro no Excel DE/PARA
-                    df_match = df_excel[df_excel['CODIGO CEDENTE'].astype(int) == int(clifor)]
+                    # Filtro no Excel DE/PARA (evita NAType em colunas com NA)
+                    codigo_cedente = pd.to_numeric(df_excel['CODIGO CEDENTE'], errors='coerce')
+                    df_match = df_excel[codigo_cedente == clifor]
                     
                     if df_match.empty:
                         print(f"  [X] Falha: Cedente {clifor} não cadastrado na planilha Excel.")
@@ -105,16 +120,20 @@ def main():
                             print("  [X] Falha: GRUPO SACADO vazio no Excel.")
                             continue
 
-                        grupo_sacado_str = str(int(grupo_sacado))
+                        grupo_sacado_int_safe = _safe_int(grupo_sacado)
+                        if grupo_sacado_int_safe is None:
+                            print("  [X] Falha: GRUPO SACADO inválido no Excel.")
+                            continue
+                        grupo_sacado_str = str(grupo_sacado_int_safe)
 
                         # Lógica de validação de Sacado/Grupo
                         if len(grupo_sacado_str) > 3:
-                            sacado_excel_id = int(grupo_sacado_str)
-                            if sacado_excel_id != sacado_id:
+                            sacado_excel_id = _safe_int(grupo_sacado_str)
+                            if sacado_excel_id is None or sacado_excel_id != sacado_id:
                                 print(f"  [X] Falha: Sacado {sacado_id} não bate com ID do Excel {sacado_excel_id}")
                                 continue
                         else:
-                            grupo_sacado_int = int(grupo_sacado_str)
+                            grupo_sacado_int = grupo_sacado_int_safe
                             df_group_check = _ensure_dataframe(
                                 securitizacao_repo.check_sacado_in_group(grupo_sacado_int, sacado_id)
                             )
@@ -131,7 +150,7 @@ def main():
                         sacado_info_row = df_sacado_info.iloc[0]
                         sacado_nome_db = sacado_info_row['NOME']
                         cnpj_sacado = str(sacado_info_row['CGC']) if pd.notna(sacado_info_row['CGC']) else None
-                        titulo_int = int(dcto) if pd.notna(dcto) else None
+                        titulo_int = _safe_int(dcto)
                         
                         if titulo_int is None:
                             continue
